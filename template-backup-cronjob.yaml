@@ -42,7 +42,19 @@ objects:
                 defaultMode: 0755
                 name: openshift-backup-script
             - name: backupdir
-              emptyDir: {}
+              persistentVolumeClaim:
+                claimName: project-backup
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: project-backup
+    namespace: ${NAMESPACE}
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${STORAGE_SIZE}
 - kind: ConfigMap
   apiVersion: v1
   metadata:
@@ -53,13 +65,17 @@ objects:
     backup.sh: |
       #!/bin/bash
       BACKUP_DIR="/backup/"
-      BACKUP_DIR_WITH_DATE=${BACKUP_DIR}_$(date +%Y%m%d%H%M)
-  
+      BACKUP_DIR_WITH_DATE=${BACKUP_DIR}$(date +%Y%m%d%H%M)
+
+      ### Cleanup
+      find /backup/ -mtime +2 -delete
+
       ### Setup
       mkdir -p $BACKUP_DIR_WITH_DATE
   
       # Backup all resources of every project
-      for project in $(oc get projects --no-headers | awk '{print $1}')
+      # for project in $(oc get projects --no-headers | awk '{print $1}')
+      for project in $(oc get projects --no-headers openshift-monitoring | awk '{print $1}')
       do
           echo -n "Backing up project $project... "
           mkdir -p ${BACKUP_DIR_WITH_DATE}/projects/${project}
@@ -90,36 +106,33 @@ objects:
       template: "cronjob-project-backup"
 
 parameters:
-- name: JOB_NAME
-  displayName: Job Name
-  description: Name of the Scheduled Job to Create.
-  value: cronjob-project-backup
+- name: "JOB_NAME"
+  description: "Name of the Scheduled Job to Create."
+  value: "cronjob-project-backup"
   required: true
-- name: SCHEDULE
-  displayName: Cron Schedule
-  description: Cron Schedule to Execute the Job
+- name: "SCHEDULE"
+  description: "Cron Schedule to Execute the Job"
   value: 0 0 * * *
   required: true
-- name: JOB_SERVICE_ACCOUNT
-  displayName: Service Account Name
-  description: Name of the Service Account To Exeucte the Job As.
-  value: project-backup
+- name: "JOB_SERVICE_ACCOUNT"
+  description: "Name of the Service Account To Exeucte the Job As."
+  value: "project-backup"
   required: true
 - name: "NAMESPACE"
-  displayName: "Namespace where this is deployed"
-  description: "Namespace where this is deployed."
+  description: "Namespace where this is deployed"
   value: "project-backup"
   required: true
 - name: "IMAGE"
-  displayName: "Image"
   description: "Image to use for the container."
   required: true
   value: "registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7"
 - name: "IMAGE_TAG"
-  displayName: "Image Tag"
   description: "Image Tag to use for the container."
   required: true
   value: "v3.11"
-
+- name: "STORAGE_SIZE"
+  description: "Size of the PV claim"
+  required: true
+  value: "1G"
 labels:
 template: cronjob-project-backup

@@ -11,7 +11,3 @@ oc process -f template-backup-cronjob.yaml \
 -p IMAGE_TAG="v3.11" \
 | oc apply -f -
 ```
-
-TODO:
-- Add PVC Template
-- Handle retention time
