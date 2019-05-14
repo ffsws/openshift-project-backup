@@ -1,0 +1,128 @@
+---
+kind: Template
+apiVersion: v1
+metadata:
+  name: cronjob-project-backup
+  annotations:
+    description: Scheduled Task to Backup all OpenShift Cluster ressources
+objects:
+- kind: CronJob
+  apiVersion: batch/v2alpha1
+  metadata:
+    name: "${JOB_NAME}"
+  spec:
+    schedule: "${SCHEDULE}"
+    concurrencyPolicy: Forbid
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: "${JOB_NAME}"
+              image: "${IMAGE}:${IMAGE_TAG}"
+              command:
+              - "/bin/bash"
+              - "-c"
+              - "/script/backup.sh"
+              env:
+              volumeMounts:
+              - name: backupdir
+                mountPath: /backup
+              - name: backupscript
+                mountPath: /script
+            restartPolicy: Never
+            terminationGracePeriodSeconds: 30
+            activeDeadlineSeconds: 500
+            dnsPolicy: ClusterFirst
+            serviceAccountName: "${JOB_SERVICE_ACCOUNT}"
+            serviceAccount: "${JOB_SERVICE_ACCOUNT}"
+            volumes:
+            - name: backupscript
+              configMap:
+                defaultMode: 0755
+                name: openshift-backup-script
+            - name: backupdir
+              emptyDir: {}
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: openshift-backup-script
+    labels:
+      template: "cronjob-project-backup"
+  data:
+    backup.sh: |
+      #!/bin/bash
+      BACKUP_DIR="/backup/"
+      BACKUP_DIR_WITH_DATE=${BACKUP_DIR}_$(date +%Y%m%d%H%M)
+  
+      ### Setup
+      mkdir -p $BACKUP_DIR_WITH_DATE
+  
+      # Backup all resources of every project
+      for project in $(oc get projects --no-headers | awk '{print $1}')
+      do
+          echo -n "Backing up project $project... "
+          mkdir -p ${BACKUP_DIR_WITH_DATE}/projects/${project}
+          oc export all -o json -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/project.json 2>/dev/null
+          oc export rolebindings -o json -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/rolebindings.json 2>/dev/null
+          oc get serviceaccount -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/serviceaccount.json 2>/dev/null
+          oc get configmap -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/configmap.json 2>/dev/null
+          oc get daemonset -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/daemonset.json 2>/dev/null
+          oc get secret -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/secret.json 2>/dev/null
+          oc get pvc -o json --export=true -n ${project} > pvc.json 2>/dev/null
+          echo "done."
+      done
+- kind: ClusterRoleBinding
+  apiVersion: v1
+  metadata:
+    name: system:project-backup
+    labels:
+      template: "cronjob-project-backup"
+  roleRef:
+    name: cluster-reader
+  subjects:
+  - kind: ServiceAccount
+    name: ${JOB_SERVICE_ACCOUNT}
+  userNames:
+  - system:serviceaccount:${NAMESPACE}:${JOB_SERVICE_ACCOUNT}
+- kind: ServiceAccount
+  apiVersion: v1
+  metadata:
+    name: ${JOB_SERVICE_ACCOUNT}
+    labels:
+      template: "cronjob-project-backup"
+
+parameters:
+- name: JOB_NAME
+  displayName: Job Name
+  description: Name of the Scheduled Job to Create.
+  value: cronjob-project-backup
+  required: true
+- name: SCHEDULE
+  displayName: Cron Schedule
+  description: Cron Schedule to Execute the Job
+  value: 0 0 * * *
+  required: true
+- name: JOB_SERVICE_ACCOUNT
+  displayName: Service Account Name
+  description: Name of the Service Account To Exeucte the Job As.
+  value: project-backup
+  required: true
+- name: "NAMESPACE"
+  displayName: "Namespace where this is deployed"
+  description: "Namespace where this is deployed."
+  value: "project-backup"
+  required: true
+- name: "IMAGE"
+  displayName: "Image"
+  description: "Image to use for the container."
+  required: true
+  value: "registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7"
+- name: "IMAGE_TAG"
+  displayName: "Image Tag"
+  description: "Image Tag to use for the container."
+  required: true
+  value: "v3.9"
+
+labels:
+template: cronjob-project-backup
