@@ -63,13 +63,10 @@ objects:
       do
           echo -n "Backing up project $project... "
           mkdir -p ${BACKUP_DIR_WITH_DATE}/projects/${project}
-          oc export all -o json -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/project.json 2>/dev/null
-          oc export rolebindings -o json -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/rolebindings.json 2>/dev/null
-          oc get serviceaccount -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/serviceaccount.json 2>/dev/null
-          oc get configmap -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/configmap.json 2>/dev/null
-          oc get daemonset -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/daemonset.json 2>/dev/null
-          oc get secret -o json --export=true -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/secret.json 2>/dev/null
-          oc get pvc -o json --export=true -n ${project} > pvc.json 2>/dev/null
+          for object in $(oc api-resources --namespaced=true -o name)
+          do
+            oc export $object -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/projects/${project}/${object}.yaml 2>/dev/null
+          done
           echo "done."
       done
 - kind: ClusterRoleBinding
@@ -122,7 +119,7 @@ parameters:
   displayName: "Image Tag"
   description: "Image Tag to use for the container."
   required: true
-  value: "v3.9"
+  value: "v3.11"
 
 labels:
 template: cronjob-project-backup
