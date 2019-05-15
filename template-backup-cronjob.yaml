@@ -81,7 +81,7 @@ objects:
         # Backup all resources of every project
         for project in $(oc get projects --no-headers | awk '{print $1}')
         do
-            echo "[$(date +'%T')]"
+            echo -n "[$(date +'%T')]"
             echo "Backing up project $project... "
             mkdir -p ${BACKUP_DIR_WITH_DATE}/${project}
             for object in $OBJECTS
@@ -91,11 +91,11 @@ objects:
         done
 
         ### Zip it
-        echo -n "Zipping"
+        echo "Zipping"
         tar czf ${BACKUP_DIR}/backup-$(date +%Y%m%d%H%M).tar.gz ${BACKUP_DIR_WITH_DATE}/* --warning=no-file-changed
 
         ### Cleanup
-        echo -n "Cleanup"
+        echo "Cleanup"
         rm -rf ${BACKUP_DIR_WITH_DATE}
   - kind: ClusterRoleBinding
     apiVersion: v1
