@@ -1,4 +1,4 @@
-Simple Cronjob that exports all avaiable API ressources to a PV in YAML format. 
+Simple Cronjob that exports all available API resources to a PV in YAML format.
 
 ## Installation
 Tested on OpenShift 3.9, 3.10, 3.11
@@ -16,16 +16,16 @@ oc process -f template-backup-cronjob.yaml \
 | oc apply -f -
 ```
 
-| Parameter  | Description | Defaults | 
+| Parameter  | Description | Defaults |
 | ------------- | ------------- | ------------- |
 | JOB_NAME  | Name of the Scheduled Job to Create | cronjob-project-backup |
 | SCHEDULE  | Cron Schedule to Execute the Job | 0 6,18 * * * |
-| JOB_SERVICE_ACCOUNT  | Name of the Service Account To Exeucte the Job As | project-backup |
+| JOB_SERVICE_ACCOUNT  | Name of the Service Account To Execute the Job As | project-backup |
 | NAMESPACE  | Name of the Namespace where to deploy the Scheduled Job | project-backup |
 | IMAGE  | Image to use for the container | registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7 |
 | IMAGE_TAG  | Image Tag to use for the container. Needs to be at least 3.11  | v3.11 |
 | STORAGE_SIZE  | Size of the Persistent Volume  | 1G |
-| DEADLINE  | Duration of the job runtime  | 3600 | 
+| DEADLINE  | Duration of the job runtime  | 3600 |
 | CRONJOB_API  | API Version to use for cronjob | batch/v1beta1 |
 
 ## Restore
