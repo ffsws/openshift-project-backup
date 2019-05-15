@@ -1,7 +1,7 @@
-# Export all Cluster API Ressources to a PV
+Simple Cronjob that exports all avaiable API ressources to a PV in YAML format. 
 
 ## Installation
-Example for using it on OpenShift 3.9:
+Tested on OpenShift 3.9, 3.10, 3.11
 ```
 oc process -f template-backup-cronjob.yaml \
 -p JOB_NAME="cronjob-project-backup" \
