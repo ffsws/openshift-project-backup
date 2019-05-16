@@ -1,18 +1,14 @@
-Simple Cronjob that exports all available API resources to a PV in YAML format.
+# OpenShift Project Backup
+Simple OpenShift Cronjob that exports all available API resources in YAML format to a Persistent Volume.
 
 ## Installation
 Tested on OpenShift 3.9, 3.10, 3.11
 ```
 oc process -f template-backup-cronjob.yaml \
--p JOB_NAME="cronjob-project-backup" \
 -p SCHEDULE="0 6,18 * * *"  \
--p JOB_SERVICE_ACCOUNT="project-backup" \
 -p NAMESPACE="project-backup" \
--p IMAGE="registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7" \
--p IMAGE_TAG="v3.11" \
 -p STORAGE_SIZE="1G" \
 -p DEADLINE=3600 \
--p CRONJOB_API="batch/v1beta1" \
 | oc apply -f -
 ```
 
@@ -29,6 +25,7 @@ oc process -f template-backup-cronjob.yaml \
 | CRONJOB_API  | API Version to use for cronjob | batch/v1beta1 |
 
 ## Restore
+In order to restore OpenShift resources, the corresponding volume must be mounted. Subsequently the resources can be restored with the oc apply -f or oc create -f commands.
 
 ## Known Issues
 - Backup can be slow and takes up to 20s per project
