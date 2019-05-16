@@ -67,13 +67,14 @@ objects:
     data:
       backup.sh: |
         #!/bin/bash
-        BACKUP_DIR="backup"
-        BACKUP_DIR_WITH_DATE=${BACKUP_DIR}/$(date +%Y%m%d%H%M)
+        BACKUP_DIR="/backup"
+        START_TIME=$(date +%Y%m%d%H%M)
+        BACKUP_DIR_WITH_DATE=${BACKUP_DIR}/${START_TIME}
         DROP_OBJECTS="pod\|events\|rolebindingrestrictions\|reviews\|bindings\|deploymentconfigrollbacks\|imagesignatures\|imagestreamimages\|imagestreamimports\|imagestreammappings\|imagestreammappings\|useridentitymappings"
-        OBJECTS="$(oc api-resources --namespaced=true -o name | grep -v $DROP_OBJECTS)"
+        OBJECT_LIST="$(oc api-resources --namespaced=true -o name | grep -v $DROP_OBJECTS)"
 
         ### Cleanup
-        find /backup/ -mtime +0 -delete
+        find $BACKUP_DIR -mtime +0 -delete
 
         ### Setup
         mkdir -p $BACKUP_DIR_WITH_DATE
@@ -84,17 +85,13 @@ objects:
             echo -n "[$(date +'%T')]"
             echo "Backing up project $project... "
             mkdir -p ${BACKUP_DIR_WITH_DATE}/${project}
-            for object in $OBJECTS
+            for object in $OBJECT_LIST
             do
               oc export $object -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml 2>/dev/null
             done
         done
-
-        ### Zip it
         echo "Zipping"
-        tar czf ${BACKUP_DIR}/backup-$(date +%Y%m%d%H%M).tar.gz ${BACKUP_DIR_WITH_DATE}/* --warning=no-file-changed
-
-        ### Cleanup
+        tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz ${BACKUP_DIR_WITH_DATE}/* --warning=no-file-changed
         echo "Cleanup"
         rm -rf ${BACKUP_DIR_WITH_DATE}
   - kind: ClusterRoleBinding
@@ -132,7 +129,7 @@ parameters:
     value: "project-backup"
     required: true
   - name: "NAMESPACE"
-    description: "Namespace where this is deployed"
+    description: "Name of the Namespace where to deploy the Scheduled Job."
     value: "project-backup"
     required: true
   - name: "IMAGE"
@@ -148,11 +145,11 @@ parameters:
     required: true
     value: "1G"
   - name: "DEADLINE"
-    description: "How long can the cronjob run"
+    description: "Duration of the job runtime"
     required: true
     value: "3600"
   - name: "CRONJOB_API"
-    description: "API to use for cronjob"
+    description: "API Version to use for cronjob"
     required: true
     value: "batch/v1beta1"
 labels:
