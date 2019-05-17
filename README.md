@@ -3,6 +3,7 @@ Simple OpenShift Cronjob that exports all available API resources in YAML format
 
 ## Installation
 Tested on OpenShift 3.9, 3.10, 3.11
+
 ```
 oc process -f template-backup-cronjob.yaml \
 -p SCHEDULE="0 6,18 * * *"  \
@@ -25,7 +26,8 @@ oc process -f template-backup-cronjob.yaml \
 | CRONJOB_API  | API Version to use for cronjob | batch/v1beta1 |
 
 ## Restore
-In order to restore OpenShift resources, the corresponding volume must be mounted. Subsequently the resources can be restored with the oc apply -f or oc create -f commands.
+In order to restore OpenShift resources, the corresponding volume must be mounted. Subsequently the resources can be restored with the oc `apply -f` or `oc create -f` commands.
 
 ## Known Issues
+- Running at least OpenShift 3.11 oc client inside container to fetch a list of available API Ressources
 - Backup can be slow and takes up to 20s per project

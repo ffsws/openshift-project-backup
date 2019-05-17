@@ -87,7 +87,7 @@ objects:
             mkdir -p ${BACKUP_DIR_WITH_DATE}/${project}
             for object in $OBJECT_LIST
             do
-              oc export $object -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml 2>/dev/null
+              oc get $object --export --ignore-not-found -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml
             done
         done
         echo "Zipping"
@@ -97,12 +97,13 @@ objects:
   - kind: ClusterRoleBinding
     apiVersion: v1
     metadata:
-      name: system:project-backup
+      name: cluster-project-backup
       namespace: "${NAMESPACE}"
       labels:
         template: "cronjob-project-backup"
+    # cluster-reader cannot list secrets
     roleRef:
-      name: cluster-reader
+      name: cluster-admin
     subjects:
       - kind: ServiceAccount
         name: "${JOB_SERVICE_ACCOUNT}"
