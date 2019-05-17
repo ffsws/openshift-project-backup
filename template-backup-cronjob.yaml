@@ -31,6 +31,8 @@ objects:
                       mountPath: /backup
                     - name: backupscript
                       mountPath: /script
+                    - name: cachedir
+                      mountPath: /cache
               restartPolicy: Never
               terminationGracePeriodSeconds: 30
               activeDeadlineSeconds: "${{DEADLINE}}"
@@ -42,6 +44,9 @@ objects:
                   configMap:
                     defaultMode: 0755
                     name: openshift-backup-script
+                - name: cachedir
+                  emptyDir:
+                    medium: Memory
                 - name: backupdir
                   persistentVolumeClaim:
                     claimName: project-backup
@@ -67,10 +72,11 @@ objects:
     data:
       backup.sh: |
         #!/bin/bash
+        CACHE_DIR="/cache"
         BACKUP_DIR="/backup"
         FORKS=6
         START_TIME=$(date +%Y%m%d%H%M)
-        BACKUP_DIR_WITH_DATE=${BACKUP_DIR}/${START_TIME}
+        CACHE_DIR_WITH_DATE=${CACHE_DIR}/${START_TIME}
         DROP_OBJECTS="pod\|events\|rolebindingrestrictions\|reviews\|bindings\|deploymentconfigrollbacks\|imagesignatures\|imagestreamimages\|imagestreamimports\|imagestreammappings\|imagestreammappings\|useridentitymappings"
         OBJECT_LIST="$(oc api-resources --namespaced=true -o name | grep -v $DROP_OBJECTS)"
 
@@ -78,24 +84,22 @@ objects:
         find $BACKUP_DIR -mtime +0 -delete
 
         ### Setup
-        mkdir -p $BACKUP_DIR_WITH_DATE
+        mkdir -p $CACHE_DIR_WITH_DATE
 
         # Backup all resources of every project
         for project in $(oc get projects --no-headers | awk '{print $1}')
         do
             echo -n "[$(date +'%T')]"
             echo "Backing up project $project... "
-            mkdir -p ${BACKUP_DIR_WITH_DATE}/${project}
+            mkdir -p ${CACHE_DIR_WITH_DATE}/${project}
             for object in $OBJECT_LIST
             do
               ((i=i%FORKS)); ((i++==0)) && wait
-              oc get $object --export --ignore-not-found -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml &
+              oc get $object --export --ignore-not-found -o yaml -n ${project} > ${CACHE_DIR_WITH_DATE}/${project}/${object}.yaml &
             done
         done
         echo "Zipping"
-        tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz ${BACKUP_DIR_WITH_DATE}/* --warning=no-file-changed
-        echo "Cleanup"
-        rm -rf ${BACKUP_DIR_WITH_DATE}
+        tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz ${CACHE_DIR_WITH_DATE}/* --warning=no-file-changed
   - kind: ClusterRoleBinding
     apiVersion: v1
     metadata:
