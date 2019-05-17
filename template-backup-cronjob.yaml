@@ -68,6 +68,7 @@ objects:
       backup.sh: |
         #!/bin/bash
         BACKUP_DIR="/backup"
+        FORKS=6
         START_TIME=$(date +%Y%m%d%H%M)
         BACKUP_DIR_WITH_DATE=${BACKUP_DIR}/${START_TIME}
         DROP_OBJECTS="pod\|events\|rolebindingrestrictions\|reviews\|bindings\|deploymentconfigrollbacks\|imagesignatures\|imagestreamimages\|imagestreamimports\|imagestreammappings\|imagestreammappings\|useridentitymappings"
@@ -87,7 +88,8 @@ objects:
             mkdir -p ${BACKUP_DIR_WITH_DATE}/${project}
             for object in $OBJECT_LIST
             do
-              oc get $object --export --ignore-not-found -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml
+              ((i=i%FORKS)); ((i++==0)) && wait
+              oc get $object --export --ignore-not-found -o yaml -n ${project} > ${BACKUP_DIR_WITH_DATE}/${project}/${object}.yaml &
             done
         done
         echo "Zipping"
