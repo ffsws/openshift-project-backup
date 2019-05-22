@@ -129,7 +129,7 @@ parameters:
     required: true
   - name: "SCHEDULE"
     description: "Cron Schedule to Execute the Job"
-    value: 0 0 * * *
+    value: 0 2,12 * * *
     required: true
   - name: "JOB_SERVICE_ACCOUNT"
     description: "Name of the Service Account To Exeucte the Job As."

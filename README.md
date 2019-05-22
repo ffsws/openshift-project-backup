@@ -6,7 +6,7 @@ Tested on OpenShift 3.9, 3.10, 3.11
 
 ```
 oc process -f template-backup-cronjob.yaml \
--p SCHEDULE="0 6,18 * * *"  \
+-p SCHEDULE="0 2,12 * * *"  \
 -p NAMESPACE="project-backup" \
 -p STORAGE_SIZE="1G" \
 -p DEADLINE=3600 \
