@@ -81,7 +81,7 @@ objects:
         OBJECT_LIST="$(oc api-resources --namespaced=true -o name | grep -v $DROP_OBJECTS)"
 
         ### Cleanup
-        find $BACKUP_DIR -mtime +0 -delete
+        find $BACKUP_DIR -mtime +10 -delete
 
         ### Setup
         mkdir -p $CACHE_DIR_WITH_DATE
