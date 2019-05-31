@@ -98,8 +98,9 @@ objects:
               oc get $object --export --ignore-not-found -o yaml -n ${project} > ${CACHE_DIR_WITH_DATE}/${project}/${object}.yaml &
             done
         done
+        cd ${CACHE_DIR_WITH_DATE}
         echo "Zipping"
-        tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz ${CACHE_DIR_WITH_DATE}/* --warning=no-file-changed
+        tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz * --warning=no-file-changed
   - kind: ClusterRoleBinding
     apiVersion: v1
     metadata:
