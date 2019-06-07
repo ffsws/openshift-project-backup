@@ -1,0 +1,10 @@
+openshift_project_backup_job_name: "cronjob-project-backup"
+openshift_project_backup_schedule: "0 6,18 * * * "
+openshift_project_backup_job_service_account: "project-backup"
+openshift_project_backup_namespace: "project-backup"
+openshift_project_backup_image: "registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7"
+openshift_project_backup_image_tag: "v3.11"
+openshift_project_backup_storage_size: "1G"
+openshift_project_backup_deadline: "3600"
+openshift_project_backup_cronjob_api: "batch/v1beta1"
+

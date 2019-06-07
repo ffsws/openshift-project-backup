@@ -1,0 +1,146 @@
+---
+- name: Create a namespace
+  k8s:
+    name: "{{ openshift_project_backup_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: Create CronJob for openshift-project-backup
+  k8s:
+    namespace: "{{ openshift_project_backup_namespace }}"
+    state: present
+    definition:
+      kind: CronJob
+      apiVersion: "{{ openshift_project_backup_cronjob_api }}"
+      metadata:
+        name: "{{ openshift_project_backup_job_name }}"
+        namespace: "{{ openshift_project_backup_namespace }}"
+      spec:
+        schedule: "{{ openshift_project_backup_schedule }}"
+        concurrencyPolicy: Forbid
+        jobTemplate:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ openshift_project_backup_job_name }}"
+                    image: "{{ openshift_project_backup_image }}:{{ openshift_project_backup_image_tag }}"
+                    command:
+                      - "/bin/bash"
+                      - "-c"
+                      - "/script/backup.sh"
+                    env:
+                    volumeMounts:
+                      - name: backupdir
+                        mountPath: /backup
+                      - name: backupscript
+                        mountPath: /script
+                      - name: cachedir
+                        mountPath: /cache
+                restartPolicy: Never
+                terminationGracePeriodSeconds: 30
+                activeDeadlineSeconds: "{{ openshift_project_backup_deadline }}"
+                dnsPolicy: ClusterFirst
+                serviceAccountName: "{{ openshift_project_backup_job_service_account }}"
+                serviceAccount: "{{ openshift_project_backup_job_service_account }}"
+                volumes:
+                  - name: backupscript
+                    configMap:
+                      defaultMode: 0755
+                      name: openshift-backup-script
+                  - name: cachedir
+                    emptyDir:
+                      medium: Memory
+                  - name: backupdir
+                    persistentVolumeClaim:
+                      claimName: project-backup
+
+- name: Create PersistentVolumeClaim for openshift-project-backup
+  k8s:
+    namespace: "{{ openshift_project_backup_namespace }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: project-backup
+        namespace: "{{ openshift_project_backup_namespace }}"
+      spec:
+        storageClassName: glusterfs-storage
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: "{{ openshift_project_backup_storage_size }}"
+
+
+- name: Create ConfigMap for openshift-project-backup
+  k8s:
+    namespace: "{{ openshift_project_backup_namespace }}"
+    state: present
+    definition:
+      kind: ConfigMap
+      apiVersion: v1
+      metadata:
+        name: openshift-backup-script
+        namespace: "{{ openshift_project_backup_namespace }}"
+      data:
+        backup.sh: |
+          #!/bin/bash
+          CACHE_DIR="/cache"
+          BACKUP_DIR="/backup"
+          FORKS=6
+          START_TIME=$(date +%Y%m%d%H%M)
+          CACHE_DIR_WITH_DATE=${CACHE_DIR}/${START_TIME}
+          DROP_OBJECTS="pod\|events\|rolebindingrestrictions\|reviews\|bindings\|deploymentconfigrollbacks\|imagesignatures\|imagestreamimages\|imagestreamimports\|imagestreammappings\|imagestreammappings\|useridentitymappings"
+          OBJECT_LIST="$(oc api-resources --namespaced=true -o name | grep -v $DROP_OBJECTS)"
+          ### Cleanup
+          find $BACKUP_DIR -mtime +10 -delete
+          ### Setup
+          mkdir -p $CACHE_DIR_WITH_DATE
+          # Backup all resources of every project
+          for project in $(oc get projects --no-headers | awk '{print $1}')
+          do
+              echo -n "[$(date +'%T')]"
+              echo "Backing up project $project... "
+              mkdir -p ${CACHE_DIR_WITH_DATE}/${project}
+              for object in $OBJECT_LIST
+              do
+                ((i=i%FORKS)); ((i++==0)) && wait
+                oc get $object --export --ignore-not-found -o yaml -n ${project} > ${CACHE_DIR_WITH_DATE}/${project}/${object}.yaml &
+              done
+          done
+          cd ${CACHE_DIR_WITH_DATE}
+          echo "Zipping"
+          tar czf ${BACKUP_DIR}/backup-${START_TIME}.tar.gz * --warning=no-file-changed
+
+- name: Create ClusterRoleBinding for openshift-project-backup
+  k8s:
+    namespace: "{{ openshift_project_backup_namespace }}"
+    state: present
+    definition:
+      kind: ClusterRoleBinding
+      apiVersion: v1
+      metadata:
+        name: cluster-project-backup
+        namespace: "{{ openshift_project_backup_namespace }}"
+      # cluster-reader cannot list secrets
+      roleRef:
+        name: cluster-admin
+      subjects:
+        - kind: ServiceAccount
+          name: "{{ openshift_project_backup_job_service_account }}"
+      userNames:
+        - "system:serviceaccount:{{ openshift_project_backup_namespace }}:{{ openshift_project_backup_job_service_account }}"
+
+- name: Create ServiceAccount for openshift-project-backup
+  k8s:
+    namespace: "{{ openshift_project_backup_namespace }}"
+    state: present
+    definition:
+      kind: ServiceAccount
+      apiVersion: v1
+      metadata:
+        namespace: "{{ openshift_project_backup_namespace }}"
+        name: "{{ openshift_project_backup_job_service_account }}"
