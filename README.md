@@ -2,9 +2,11 @@
 Simple OpenShift Cronjob that exports all available API resources in YAML format to a Persistent Volume.
 
 ## Requirements
+```
 python >= 2.7
 openshift >= 0.6
 PyYAML >= 3.11
+```
 
 ## Installation
 Tested on OpenShift 3.9, 3.10, 3.11
