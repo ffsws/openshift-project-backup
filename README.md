@@ -14,7 +14,7 @@ Tested on OpenShift 3.9, 3.10, 3.11
 ```
 ansible-playbook playbook.yml \
 -e openshift_project_backup_job_name="cronjob-project-backup" \
--e openshift_project_backup_schedule="0 6,18 * * * "
+-e openshift_project_backup_schedule="0 * * * * "
 -e openshift_project_backup_job_service_account="project-backup"
 -e openshift_project_backup_namespace="project-backup"
 -e openshift_project_backup_image="registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7"

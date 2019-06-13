@@ -1,5 +1,5 @@
 openshift_project_backup_job_name: "cronjob-project-backup"
-openshift_project_backup_schedule: "0 6,18 * * * "
+openshift_project_backup_schedule: "0 * * * * "
 openshift_project_backup_job_service_account: "project-backup"
 openshift_project_backup_namespace: "project-backup"
 openshift_project_backup_image: "registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7"
