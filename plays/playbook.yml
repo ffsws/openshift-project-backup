@@ -3,4 +3,4 @@
   connection: local
   gather_facts: false
   roles:
-    - openshift-project-backup
+    - ../roles/openshift-project-backup
