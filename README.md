@@ -12,7 +12,7 @@ PyYAML >= 3.11
 Tested on OpenShift 3.9, 3.10, 3.11
 
 ```
-ansible-playbook playbook.yml \
+ansible-playbook plays/playbook.yml \
 -e openshift_project_backup_job_name="cronjob-project-backup" \
 -e openshift_project_backup_schedule="0 * * * * "
 -e openshift_project_backup_job_service_account="project-backup"
